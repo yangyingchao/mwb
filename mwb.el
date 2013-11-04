@@ -22,6 +22,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'metaweblog)
+(require 'cl)
 
 (defgroup mwb nil
   "博客园客户端分组"
@@ -301,59 +302,60 @@
   "将博文保存到mwb-entry-list变量中。但并不立即保存到文件中"
 
   (let ((title (cdr (assoc "title" post)))
-	(postid (cdr (assoc "postid" post)))
-	(categories (cdr (assoc "categories" post)))
-	(done nil)
-	(index 0))
+        (postid (cdr (assoc "postid" post)))
+        (categories (cdr (assoc "categories" post)))
+        (done nil)
+        (index 0))
     (progn
       (if (integerp postid)
-	  (setq postid (int-to-string postid)))
+          (setq postid (int-to-string postid)))
 
       ;;保存博文
       (with-temp-file (concat mwb-file-post-path postid)
-	(print post (current-buffer)))
+        (print post (current-buffer)))
+
       ;;如果有相同标题的博文项，则提示是否合并到同一项中去，如果有已经存在多个相同的项，对每个都询问，直到回答是或者完
       (mapc (lambda (entry)
-	      (progn
-		(or done
-		    (not (equal title (nth 1 entry)))
-		    (not (y-or-n-p (format "merge the post %s with entry %S" postid entry)))
-					;下面是将该博文合并到该项中
-		    (progn
-		      (setq done t)
-		      (setcar (nthcdr index mwb-entry-list)
-					;id
-			      (list (nth 0 entry)
-					;title
-				    title
-					;postid
-				    postid
-					;categories
-				    categories
-					;src-file
-				    (nth 4 entry)
-					;state
-				    "PUBLISHED"))))
-		(setq index (1+ index))))
-	    mwb-entry-list)
+              (progn
+                (or done
+                    (not (equal title (nth 1 entry)))
+                    (not (y-or-n-p (format "merge the post %s with entry %S" postid entry)))
+                                        ;下面是将该博文合并到该项中
+                    (progn
+                      (setq done t)
+                      (setcar (nthcdr index mwb-entry-list)
+                                        ;id
+                              (list (nth 0 entry)
+                                        ;title
+                                    title
+                                        ;postid
+                                    postid
+                                        ;categories
+                                    categories
+                                        ;src-file
+                                    (nth 4 entry)
+                                        ;state
+                                    "PUBLISHED"))))
+                (setq index (1+ index))))
+            mwb-entry-list)
 
-					;还没有插入则新建项
+                                        ;还没有插入则新建项
       (or done
-	  (push
-					;id
-	   (list (mwb-gen-id)
-					;title
-		 title
-					;postid
-		 postid
-					;categories
-		 categories
-					;src-file
-		 nil
-					;state
-		 "PUBLISHED")
+          (push
+                                        ;id
+           (list (mwb-gen-id)
+                                        ;title
+                 title
+                                        ;postid
+                 postid
+                                        ;categories
+                 categories
+                                        ;src-file
+                 nil
+                                        ;state
+                 "PUBLISHED")
 
-	   mwb-entry-list)))))
+           mwb-entry-list)))))
 
 (defun mwb-push-src-file-to-entry-list (src-file)
   "将一个源文件加入到博文项中，但并不立即保存博文项到文件中。"
@@ -612,21 +614,21 @@ nf: number of fields in fmt."
 
 
 (defun mwb-get-postid-by-title (title)
-  (and (stringp title)
-       (let ((postid nil))
-	 (mapc (lambda (entry)
-		 (or postid
-		     (and (equal title
-				 (nth 4 mwb-entry-list))
-			  (setq postid
-				(nth 2 mwb-entry-list)))))
-	       mwb-entry-list)
-	 (and postid
-	      (integerp postid)
-	      (int-to-string postid))
-	 (or postid
-	     (setq postid "0"))))
-  postid)
+  (let ((idx 0)
+        (cpy mwb-entry-list)
+        postid entry)
+    (when (stringp title)
+      (while (and (not postid)
+                  (setq entry (pop cpy)))
+        (when (equal title
+                     (nth 1 entry))
+          (let ((tmpid (nth 2 entry)))
+            (setq postid (if tmpid
+                             (if (numberp tmpid)
+                                 (number-to-string tmpid)
+                               tmpid)
+                           "0"))))))
+    postid))
 
 
 (defun mwb-get-postid-by-src-file-name (filename)
@@ -937,19 +939,20 @@ nf: number of fields in fmt."
 
 (defun mwb-get-recent-posts ()
   (interactive)
-  (let* ((num (read-number "输入要获取的随笔篇数："
-			   1))
-	 (posts (condition-case ()
-		    (mwb-metaweblog-get-recent-posts num)
-		  (error nil))))
+  (mwb-request-password)
+  (let* ((num (read-number "Input number of posts to retrieve:"
+                           1))
+         (posts (condition-case ()
+                    (mwb-metaweblog-get-recent-posts num)
+                  (error nil))))
     (if (not posts)
-	(message "获取失败！")
+        (message "Failed to retrieve posts.")
       (progn
-	(mapc (lambda (post)
-		(mwb-push-post-to-entry-list post))
-	      posts)
-	(mwb-save-entry-list)
-	(message "获取成功！")))))
+        (mapc (lambda (post)
+                (mwb-push-post-to-entry-list post))
+              posts)
+        (mwb-save-entry-list)
+        (message "Succeeded.")))))
 
 
 
