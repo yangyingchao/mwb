@@ -4,11 +4,6 @@
 #+KEYWORDS: Emacs, Org, Publish
 #+CATEGORIES: Emacs
 
-Introduces how to use this MWB minor mode.
-#+BEGIN_HTML
-<!--more-->
-#+END_HTML
-
 * Introduction
 
 MWB stands for "MetaWeblog", it is an submode for org mode and can be used to
