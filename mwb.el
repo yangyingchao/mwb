@@ -1041,6 +1041,12 @@ nf: number of fields in fmt."
   (mwb-load-variables)
   )
 
+
+(defun mwb-reload ()
+  "Reload configuration of mwb"
+  (interactive)
+  (mwb-init))
+
 ;; 定义菜单
 (define-key mwb-mode-map [menu-bar menu-bar-mwb-menu]
   (cons "Mwb" mwb-mode-map))
