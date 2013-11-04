@@ -1,0 +1,44 @@
+#+TITLE: Introduction to MWB Minor Mode
+#+AUTHOR: Yang, Ying-chao
+#+OPTIONS: ^:nil author:nil timestamp:nil creator:nil
+#+KEYWORDS: Emacs, Org, Publish
+#+CATEGORIES: Emacs
+
+Introduces how to use this MWB minor mode.
+#+BEGIN_HTML
+<!--more-->
+#+END_HTML
+
+* Introduction
+
+MWB stands for "MetaWeblog", it is an submode for org mode and can be used to
+publish org files to meta web blog.
+
+It is based on [[http://www.cnblogs.com/Open_Source/archive/2012/09/14/2684897.html][CnBlog]], and was modified to port to other meta web blogs.
+
+* Usage
+
+Download this package from [[https://github.com/yangyingchao/mwb][github]] and put into PATH , then add
+following codes to your init file.
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'load-path PATH)
+  (autoload 'mwb-minor-mode "mwb" "mwb minor mode" t)
+  (autoload 'mwb-new-post "mwb" "new post" t)
+#+END_SRC
+
+If you want to turn on mwb-minor-mode automatically for some mode (org-mode,
+for example), you can add following line:
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-mode-hook 'mwb-minor-mode)
+#+END_SRC
+
+
+Then, open an org file, and stroke: M-x: mwb-setup-blog, and follow the
+instructions.
+
+ When finished setting up, edit an org file, and stroke: M-x: mwb-new-post,
+ and then waits for the post to be done.
+
+ That's all.
