@@ -184,8 +184,9 @@
          (path (concat mwb-file-post-path postid)))
     (if (file-exists-p path)
         (delete-file path))
-    (with-temp-file path
-      (print content (current-buffer)))))
+    (save-excursion
+      (with-temp-file path
+        (print content (current-buffer))))))
 
 (defun mwb-load-entry-list ()
   (setq mwb-entry-list
@@ -197,11 +198,12 @@
 
 (defun mwb-save-entry-list ()
   "保存mwb-entry-list，成功返回t，否则返回nil"
-  (condition-case ()
-      (with-temp-file mwb-entry-list-file
-	(print mwb-entry-list
-	       (current-buffer)))
-    (error nil)))
+  (save-excursion
+    (condition-case ()
+        (with-temp-file mwb-entry-list-file
+          (print mwb-entry-list
+                 (current-buffer)))
+      (error nil))))
 
 
 (defun mwb-load-category-list ()
