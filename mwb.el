@@ -539,7 +539,7 @@
 					;先将分类格式简化，只留取名字
   (setq mwb-category-list
 	(mapcar (lambda (category)
-		  (cdr (assoc "description" category))
+              (cdr (assoc "categoryName" category))
 		  )
 		mwb-category-list))
   (with-temp-file mwb-category-list-file
@@ -1256,6 +1256,7 @@ postid: if found."
 ;; 获取并保存分类
 (defun mwb-get-categories ()
   (interactive)
+  (mwb-request-password)
   (setq mwb-category-list
         (condition-case ()
             (mwb-metaweblog-get-categories)
