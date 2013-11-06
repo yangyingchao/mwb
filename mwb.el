@@ -536,15 +536,14 @@
 	  (error nil))))
 
 (defun mwb-save-category-list ()
-					;先将分类格式简化，只留取名字
   (setq mwb-category-list
-	(mapcar (lambda (category)
-              (cdr (assoc "categoryName" category))
-		  )
-		mwb-category-list))
+        (mapcar (lambda (category)
+                  (or (cdr (assoc "categoryName" category))
+                      (cdr (assoc "description" category))))
+                mwb-category-list))
   (with-temp-file mwb-category-list-file
     (print mwb-category-list
-	   (current-buffer))))
+           (current-buffer))))
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;底层函数;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun mwb-check-legal-for-publish (src-file)
