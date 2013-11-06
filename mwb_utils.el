@@ -3,11 +3,12 @@
 ;;; File: mwb_utils.el
 ;;; Author: YangYingchao <yangyingchao@gmail.com>
 ;;;
-;;; Time-stamp: <2013-11-04 by Yang,Ying-chao>
+;;; Time-stamp: <2013-11-06 by Yang,Ying-chao>
 ;;;
 ;;;
 ;;;
 
+(require 'mwb)
 
 (defun mwb-batch-post ()
   "description"
