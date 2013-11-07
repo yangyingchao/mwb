@@ -408,6 +408,14 @@
                     ("categories"  "categories" "[随笔分类]Emacs" "[随笔分类]Linux应用")
                     ("description" . "博文正文。")))
 
+(defvar mwb-customize-checks nil
+  "A list of checks defined by user to check if a buffer can be post publicly,
+The check functions should take filepath as parameter and return t if it can be posted.
+Checks will stop whenever one function returns nil.
+You can call `add-to-list` to modify this list, for example, following code will only allow
+org files to be published:
+(add-to-list 'mwb-customize-checks (lambda(x) (string= (file-name-extension x) \"org\")))")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;Menu;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar mwb-mode-map
@@ -547,20 +555,23 @@
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;底层函数;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun mwb-check-legal-for-publish (src-file)
-  "检查文件是否可以发布"
+  "Check if file is legal to publish."
   (and
-   (if (member (file-name-extension src-file)
-	       mwb-src-file-extension-list)
-       t
-     (progn
-       (message "Failed: UNSUPPORTED file!")
-       nil))
+   (if mwb-customize-checks
+       (let ((i 0)
+             (total (length mwb-customize-checks))
+             (res t))
+         (while (and res (< i total))
+           (setq res (funcall (nth i mwb-customize-checks) src-file)
+                 i (1+ i)))
+         res)
+     t)
 
-   (if (equal (mwb-check-src-file-state (buffer-file-name))
-	      "PUBLISHED")
+   (if (equal (mwb-check-src-file-state src-file)
+              "PUBLISHED")
        (progn
-	 (message "This post has been published, you can update it, using M-x mwb-edit-post")
-	 nil)
+         (message "This post has been published, you can update it, using M-x mwb-edit-post")
+         nil)
      t)))
 
 (defun mwb-check-legal-for-delete (src-file)
@@ -1146,38 +1157,27 @@ postid: if found."
 ;;;###autoload
 (defun mwb-new-post ()
   (interactive)
-  (mwb-request-password)
-  (let* ((postid  ;得到博文ｉｄ
-          (mwb-metaweblog-new-post (mwb-current-buffer-to-post)
-                                   t))
-                                        ;得到博文内容
-         (post
-          (mwb-metaweblog-get-post postid)))
+  (let ((fn (buffer-file-name))
+        postid post)
+    (if (not (mwb-check-legal-for-publish fn))
+        (message "One of `mwb-customize-checks` prevent this post!")
+      (mwb-request-password)
+      (setq postid (mwb-metaweblog-new-post (mwb-current-buffer-to-post) t)
+            postid (if (integerp postid) (int-to-string postid) postid)
+            post (mwb-metaweblog-get-post postid)) ;; Get posted content based on postid
 
-                                        ;todo:这里要刷新列表
-    ;;保存博文项和博文内容
-    (if (integerp postid)
-        (setq postid (int-to-string postid)))
-    ;;保存博文
-    (mwb-save-posted postid post)
+      (mwb-save-posted postid post) ;; Save posted content
 
-    (if (mwb-check-file-in-entry-list (buffer-file-name))
-        (mwb-assign-post-to-file post (buffer-file-name))
-      (push
-                                        ;id
-       (list (mwb-gen-id)
-                                        ;title
-             (cdr (assoc "title" post))
-                                        ;postid
-             postid
-                                        ;categories
-             (cdr (assoc "categories" post))
-             (buffer-file-name)
-             "PUBLISHED")
-       mwb-entry-list))
-                                        ;保存博文项列表
-    (mwb-save-entry-list)
-    (message "Post published！")))
+      ;; Save entry
+      (if (mwb-check-file-in-entry-list (buffer-file-name))
+          (mwb-assign-post-to-file post (buffer-file-name))
+        (push
+
+         (list (mwb-gen-id) (cdr (assoc "title" post))  postid
+               (cdr (assoc "categories" post)) (buffer-file-name) "PUBLISHED")
+         mwb-entry-list))
+      (mwb-save-entry-list)
+      (message "Post published！"))))
 
 (defun mwb-save-draft ()
   (interactive)
