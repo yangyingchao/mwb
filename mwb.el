@@ -387,8 +387,7 @@
 
 (defvar mwb-tag-list nil "Tags of blogs.")
 
-(defvar mwb-file-post-path
-  (concat mwb-file-root-path "posts/")
+(defvar mwb-file-post-path nil
   "博文内容文件根目录，其中的博文内容文件以博文ｉｄ命名")
 (defvar mwb-category-list nil
   "博文分类列表")
@@ -1267,6 +1266,10 @@ postid: if found."
   ;; Ensure mwb-file-root-path exists first.
   (if (not (file-exists-p mwb-file-root-path))
       (make-directory mwb-file-root-path))
+
+  (setq mwb-file-post-path (concat mwb-file-root-path "posts/"))
+  (if (not (file-exists-p mwb-file-post-path))
+      (make-directory mwb-file-post-path))
 
   (mwb-get-metadata))
 
