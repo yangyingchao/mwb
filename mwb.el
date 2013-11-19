@@ -384,17 +384,15 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar mwb-posts-in-category nil
   "分类之后的博文，这是显示在Mwb-Manager缓冲区里的主要内容")
-(defvar mwb-entry-list-file
-  (concat mwb-file-root-path "entry-list-file")
-  "博文项列表文件")
+
+(defvar mwb-tag-list nil "Tags of blogs.")
+
 (defvar mwb-file-post-path
   (concat mwb-file-root-path "posts/")
   "博文内容文件根目录，其中的博文内容文件以博文ｉｄ命名")
 (defvar mwb-category-list nil
   "博文分类列表")
-(defvar mwb-category-list-file
-  (concat mwb-file-root-path "category-list-file")
-  "博文分类列表")
+
 (defvar mwb-blog-info nil
   "博客信息")
 (defvar mwb-entry-list nil
@@ -403,10 +401,6 @@
   "分类列表")
 (defvar mwb-post-list-window nil
   "博文列表窗口")
-(setq  test-post  `(("title" . "博文题目")
-                    ("dateCreated" :datetime (20423 52590))
-                    ("categories"  "categories" "[随笔分类]Emacs" "[随笔分类]Linux应用")
-                    ("description" . "博文正文。")))
 
 (defvar mwb-customize-checks nil
   "A list of checks defined by user to check if a buffer can be post publicly,
@@ -470,33 +464,7 @@ org files to be published:
 (define-key mwb-mode-map (kbd "\C-c c u") 'mwb-get-users-blogs)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;LoadData;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun mwb-load-variables ()
-  "加载各变量的值";
-					;加载博文项列表
-  (mwb-load-entry-list)
-					;加载博文分类
-  (mwb-load-category-list)
-					;将博文项列表中的项加入到相应的分类中去
-  (mapc (lambda (categorie)
-	  (progn
-					;先将该分类加入
-	    (push (cons categorie nil)
-		  mwb-posts-in-category)
-	    )
 
-					;将属于该分类的项加入该分类
-	  (mapc (lambda (entry)
-		  (let* ((entry-categories (nth 3 entry))
-			 (flag (member categorie entry-categories)))
-		    (and flag
-			 (push entry
-			       (cdr (assoc categorie mwb-posts-in-category)))))
-		  )
-
-		mwb-entry-list))
-
-	mwb-category-list)
-  )
 
 
 (defun mwb-request-password ()
@@ -516,42 +484,6 @@ org files to be published:
     (save-excursion
       (with-temp-file path
         (print content (current-buffer))))))
-
-(defun mwb-load-entry-list ()
-  (setq mwb-entry-list
-	(condition-case ()
-	    (with-temp-buffer
-	      (insert-file-contents mwb-entry-list-file)
-	      (car (read-from-string (buffer-string))))
-	  (error nil))))
-
-(defun mwb-save-entry-list ()
-  "保存mwb-entry-list，成功返回t，否则返回nil"
-  (save-excursion
-    (condition-case ()
-        (with-temp-file mwb-entry-list-file
-          (print mwb-entry-list
-                 (current-buffer)))
-      (error nil))))
-
-
-(defun mwb-load-category-list ()
-  (setq mwb-category-list
-	(condition-case ()
-	    (with-temp-buffer
-	      (insert-file-contents mwb-category-list-file)
-	      (car (read-from-string (buffer-string))))
-	  (error nil))))
-
-(defun mwb-save-category-list ()
-  (setq mwb-category-list
-        (mapcar (lambda (category)
-                  (or (cdr (assoc "categoryName" category))
-                      (cdr (assoc "description" category))))
-                mwb-category-list))
-  (with-temp-file mwb-category-list-file
-    (print mwb-category-list
-           (current-buffer))))
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;底层函数;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun mwb-check-legal-for-publish (src-file)
@@ -942,7 +874,7 @@ nf: number of fields in fmt."
 			   (equal postid
 				  (nth 2 entry)))
 			 mwb-entry-list))
-	(mwb-save-entry-list)
+	(mwb-save-metadata)
 	(and (file-exists-p (concat mwb-file-post-path postid))
 	     (delete-file (concat mwb-file-post-path postid)))
 	t)
@@ -1068,7 +1000,7 @@ postid: if found."
 			      (setcar (nthcdr 5 entry) "UNPUBLISHED")))
 			entry)
 		      mwb-entry-list))
-	(mwb-save-entry-list)
+	(mwb-save-metadata)
 	(and (file-exists-p (concat mwb-file-post-path postid))
 	     (delete-file (concat mwb-file-post-path postid)))
 	t)
@@ -1099,7 +1031,7 @@ postid: if found."
 		mwb-src-file-extension-list)
 	(progn
 	  (mwb-push-src-file-to-entry-list src-file)
-	  (mwb-save-entry-list)
+	  (mwb-save-metadata)
 	  (message "Succeed!"))
       (message "Failed: UNSUPPORTED file!"))))
 
@@ -1111,7 +1043,7 @@ postid: if found."
 		mwb-src-file-extension-list)
 	(progn
 	  (mwb-push-src-file-to-entry-list src-file)
-	  (mwb-save-entry-list)
+	  (mwb-save-metadata)
 	  (message "Succeed!"))
       (message "Failed: UNSUPPORTED file!"))))
 
@@ -1121,7 +1053,7 @@ postid: if found."
   (interactive)
   (let ((directory (read-directory-name "Import folder: ")))
     (mwb-import-directory directory)
-    (mwb-save-entry-list)))
+    (mwb-save-metadata)))
 
 (defun mwb-setup-blog ()
   (interactive)
@@ -1149,7 +1081,6 @@ postid: if found."
             (make-directory mwb-file-root-path))
         (or (file-directory-p mwb-file-post-path)
             (make-directory mwb-file-post-path))
-        (mwb-save-category-list)
         (message "Set up finished. Password is not saved in customize file,
         you can save it on your own."))
     (message "Failed to setup.")))
@@ -1176,7 +1107,7 @@ postid: if found."
          (list (mwb-gen-id) (cdr (assoc "title" post))  postid
                (cdr (assoc "categories" post)) (buffer-file-name) "PUBLISHED")
          mwb-entry-list))
-      (mwb-save-entry-list)
+      (mwb-save-metadata)
       (message "Post published！"))))
 
 (defun mwb-save-draft ()
@@ -1188,7 +1119,7 @@ postid: if found."
 	  (cons
 	   (mwb-metaweblog-get-post postid)
 	   mwb-entry-list))
-    (mwb-save-entry-list))
+    (mwb-save-metadata))
   (message "保存草稿成功！"))
 
 
@@ -1203,7 +1134,7 @@ postid: if found."
 		 (yes-or-no-p "Are you sure?")
 		 (mwb-metaweblog-delete-post postid t)
 		 (mwb-delete-post-from-entry-list postid)
-		 (mwb-save-entry-list))
+		 (mwb-save-metadata))
 
 	    (message "Succeed！")
 	  (message "Failed！")))))
@@ -1229,7 +1160,7 @@ postid: if found."
         ;; Save entry list.
         (mwb-assign-post-to-file (mwb-metaweblog-get-post postid)
                                      (buffer-file-name))
-        (mwb-save-entry-list)
+        (mwb-save-metadata)
 
         ;; Save modified content.
         (mwb-save-posted postid content)
@@ -1260,11 +1191,10 @@ postid: if found."
         (condition-case ()
             (mwb-metaweblog-get-categories)
           (error nil)))
-  (if mwb-category-list
-      (progn
-        (mwb-save-category-list)
-        (message "获取分类成功！"))
-    (message "获取分类失败")))
+  (if  (not mwb-category-list)
+      (message "Failed to get categories.")
+    (mwb-save-metadata)
+    (message "Succeeded in getting categories.")))
 
 
 
@@ -1282,7 +1212,7 @@ postid: if found."
         (mapc (lambda (post)
                 (mwb-push-post-to-entry-list post))
               posts)
-        (mwb-save-entry-list)
+        (mwb-save-metadata)
         (message "Succeeded.")))))
 
 
@@ -1301,76 +1231,44 @@ postid: if found."
   (set-text-properties 0 (length str) plist str)
   str)
 
-;; ;;[c][b]
-;; (defun mwb-category-selection-toggle (c)
-;;   "根据字符c查找要触发的分类，然后触发这个分类"
-;;   (let* ((begin (string-match (concat "[" c "]" [ ]*)
-;; 			      (buffer-substring (string-match "随笔分类" (buffer-string)) (point-max)))
+(defun mwb-select-insert-category ()
+  "Select and insert category at current position"
+  (interactive)
 
-;; 		(substring (buffer-substring (point-min) (point-max)) 23728 23731 )
-;; 		))))
+  )
 
-;; (defun mwb-category-selection ()
-;;   (interactive)
-;;   (save-window-excursion
-;;     (delete-other-windows)
-;;     (split-window-vertically)
-;;     (org-switch-to-buffer-other-window (get-buffer-create " *Mwb categories*"))
-;;     (erase-buffer)
 
-;;     ;; 列出当前已经选择的分类
-;;     (insert "Current:    \n")
+(defun mwb-get-metadata ()
+  "Get metadata of mwb"
+  ;; Load variables if metadata exists.
+  (setq mwb-entry-list nil
+        mwb-category-list nil
+        meb-tag-list nil)
 
-;;     ;; 列出随笔分类
-;;     (insert "\n\n随笔分类:    \n")
-;;     (let* ((idx ?0)
-;;            (ctgr-list (remove-if-not (lambda (ctgr)
-;;                                        (equal (substring ctgr 1 5) "随笔分类"))
-;;                                      mwb-category-list))
-;;            (maxlen (apply 'max (mapcar 'length ctgr-list))))
+  (let ((metadata
+         (with-temp-file (make-temp-file "mwb-metadata")
+           (insert-file-contents (concat mwb-file-root-path "mwb-metadata"))
+           (read (set-marker (make-marker) 0 (current-buffer))))))
+    (setq mwb-entry-list (pop metadata)
+          mwb-category-list (pop metadata)
+          meb-tag-list (pop metadata))))
 
-;;       (mapc (lambda (ctgr)
-;; 	      (insert "[" idx "]" (format "%s  " (substring ctgr 6)))
-;; 	      (setq idx (1+ idx)))
-;; 	    ctgr-list))
-
-;;     ;; 列出网站类分
-;;     (insert "\n\n网站分类:    \n")
-;;     (let* ((idx ?A)
-;; 	   (ctgr-list (remove-if-not (lambda (ctgr)
-;; 				       (equal (substring ctgr 1 5) "网站分类"))
-;; 				     mwb-category-list))
-;; 	   (maxlen (apply 'max (mapcar 'length ctgr-list))))
-;;       (mapc (lambda (ctgr)
-;; 	      (insert "[" idx "]" (format "%s  " (substring ctgr 6)))
-;; 	      (setq idx (1+ idx)
-;; 		    ))
-;; 	    ctgr-list))
-;;     (insert "\n\n其他分类:    \n")
-;;     ;; 列出其他分类
-;;     (mapc (lambda (ctgr)
-;; 	    (if (equal (substring ctgr 1 3) "发布")
-;; 		(insert (format "%s   " ctgr)))
-;; 	    )
-;; 	  mwb-category-list)
-;;     (message "[0..9..a-z..]:Toggle [SPC]:clear [RET]:accept")
-;;     ;; 处理分类选择
-;;     (catch 'exit
-;;       (while t
-;; 	(let ((c (read-char-exclusive)))
-;; 	  (cond
-;; 	   ((= c ?\r) (throw exit t))
-;; 	   (t (do nothing)
-;; 	      )
-;; 	   ))))))
-
+(defun mwb-save-metadata ()
+  "Save metadata"
+  (with-temp-file (concat mwb-file-root-path "mwb-metadata")
+    (erase-buffer)
+    (print (list mwb-entry-list mwb-category-list mwb-tag-list) (current-buffer))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mode设置;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 下面是关于minor mode的内容
 (defun mwb-init ()
-  "Mwb的所有初始化工作"
-  (mwb-load-variables)
-  )
+  "Initialize mwb."
+
+  ;; Ensure mwb-file-root-path exists first.
+  (if (not (file-exists-p mwb-file-root-path))
+      (make-directory mwb-file-root-path))
+
+  (mwb-get-metadata))
 
 
 (defun mwb-reload ()
@@ -1388,8 +1286,7 @@ postid: if found."
   :init-value nil
   :lighter " Mwb"
   :keymap mwb-mode-map
-  :group Mwb)
-
-(add-hook 'mwb-minor-mode-hook 'mwb-init)
+  :group Mwb
+  (mwb-init))
 
 (provide 'mwb)
