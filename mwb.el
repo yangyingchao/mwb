@@ -1031,7 +1031,6 @@ postid: if found."
 
 (defun mwb-current-buffer-to-post ()
   (let ((func (cadr (assoc major-mode mwb-b2p-method-alist))))
-    (print (cons major-mode func))
     (if func
         (funcall func)
       (mwb-b2p-other))))
