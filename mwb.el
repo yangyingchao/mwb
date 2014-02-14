@@ -1243,13 +1243,16 @@ postid: if found."
         mwb-category-list nil
         meb-tag-list nil)
 
-  (let ((metadata
-         (with-temp-file (make-temp-file "mwb-metadata")
-           (insert-file-contents (concat mwb-file-root-path "mwb-metadata"))
-           (read (set-marker (make-marker) 0 (current-buffer))))))
-    (setq mwb-entry-list (pop metadata)
-          mwb-category-list (pop metadata)
-          meb-tag-list (pop metadata))))
+  (let ((meta-file (concat mwb-file-root-path "mwb-metadata"))
+        metadata)
+    (when (file-exists-p meta-file)
+      (setq metadata
+            (with-temp-file (make-temp-file "mwb-metadata")
+              (insert-file-contents (concat mwb-file-root-path "mwb-metadata"))
+              (read (set-marker (make-marker) 0 (current-buffer)))))
+      (setq mwb-entry-list (pop metadata)
+            mwb-category-list (pop metadata)
+            meb-tag-list (pop metadata)))))
 
 (defun mwb-save-metadata ()
   "Save metadata"
