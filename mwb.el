@@ -42,7 +42,7 @@
   :type 'string)
 (defvar mwb-user-passwd nil "Password")
 
-(defcustom mwb-media-object-suffix-list '("jpg" "jpeg" "png" "gif" "mp4")
+(defcustom mwb-media-object-suffix-list '("jpg" "jpeg" "png" "gif" "mp4" "zip" "gz" "bz2")
   "希望处理的媒体文件类型"
   :group 'mwb
   :type 'list)
