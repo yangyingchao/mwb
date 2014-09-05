@@ -239,6 +239,7 @@
     ("naplps" "image/naplps")
     ("nif" "image/x-niff")
     ("niff" "image/x-niff")
+    ("org" "text/plain")
     ("p" "text/x-pascal")
     ("pas" "text/pascal")
     ("pbm" "image/x-portable-bitmap")
@@ -486,24 +487,23 @@ org files to be published:
 
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;底层函数;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun mwb-check-legal-for-publish (src-file)
-  "Check if file is legal to publish."
-  (and
-   (if mwb-customize-checks
-       (let ((i 0)
-             (total (length mwb-customize-checks))
-             (res t))
-         (while (and res (< i total))
-           (setq res (funcall (nth i mwb-customize-checks) src-file)
-                 i (1+ i)))
-         res)
-     t)
-
-   (if (equal (mwb-check-src-file-state src-file)
-              "PUBLISHED")
-       (progn
-         (message "This post has been published, you can update it, using M-x mwb-edit-post")
-         nil)
-     t)))
+  "Check if file is legal to publish. Return values:
+   'PUBLISHED: if already published.
+   'OK: OK to public.
+   'FORBID: some policies forbid this file to be posted. This is controlled by
+mwb-customize-checks, which is completely up to user."
+  (if (equal (mwb-check-src-file-state src-file)
+             "PUBLISHED")
+      'PUBLISHED
+    (if mwb-customize-checks
+        (let ((i 0)
+              (total (length mwb-customize-checks))
+              (res t))
+          (while (and res (< i total))
+            (setq res (funcall (nth i mwb-customize-checks) src-file)
+                  i (1+ i)))
+          (if res 'FORBID 'OK))
+      'OK)))
 
 (defun mwb-check-legal-for-delete (src-file)
   "检查文件是否可以删除相应的博文"
@@ -1088,25 +1088,29 @@ postid: if found."
   (interactive)
   (let ((fn (buffer-file-name))
         postid post)
-    (if (not (mwb-check-legal-for-publish fn))
-        (message "One of `mwb-customize-checks` prevent this post!")
-      (mwb-request-password)
-      (setq postid (mwb-metaweblog-new-post (mwb-current-buffer-to-post) t)
-            postid (if (integerp postid) (int-to-string postid) postid)
-            post (mwb-metaweblog-get-post postid)) ;; Get posted content based on postid
 
-      (mwb-save-posted postid post) ;; Save posted content
+    (case (mwb-check-legal-for-publish fn)
+      ((PUBLISHED)
+       (message "This post has been published, you can update it, using M-x mwb-edit-post(C-c c e)"))
+      ((FORBID) "One of `mwb-customize-checks` prevent this post!")
+      (t
+       (mwb-request-password)
+       (setq postid (mwb-metaweblog-new-post (mwb-current-buffer-to-post) t)
+             postid (if (integerp postid) (int-to-string postid) postid)
+             post (mwb-metaweblog-get-post postid)) ;; Get posted content based on postid
 
-      ;; Save entry
-      (if (mwb-check-file-in-entry-list (buffer-file-name))
-          (mwb-assign-post-to-file post (buffer-file-name))
-        (push
+       (mwb-save-posted postid post) ;; Save posted content
 
-         (list (mwb-gen-id) (cdr (assoc "title" post))  postid
-               (cdr (assoc "categories" post)) (buffer-file-name) "PUBLISHED")
-         mwb-entry-list))
-      (mwb-save-metadata)
-      (message "Post published！"))))
+       ;; Save entry
+       (if (mwb-check-file-in-entry-list (buffer-file-name))
+           (mwb-assign-post-to-file post (buffer-file-name))
+         (push
+
+          (list (mwb-gen-id) (cdr (assoc "title" post))  postid
+                (cdr (assoc "categories" post)) (buffer-file-name) "PUBLISHED")
+          mwb-entry-list))
+       (mwb-save-metadata)
+       (message "Post published！")))))
 
 (defun mwb-save-draft ()
   (interactive)
