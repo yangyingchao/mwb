@@ -502,7 +502,7 @@ mwb-customize-checks, which is completely up to user."
           (while (and res (< i total))
             (setq res (funcall (nth i mwb-customize-checks) src-file)
                   i (1+ i)))
-          (if res 'FORBID 'OK))
+          (if (not res) 'FORBID 'OK))
       'OK)))
 
 (defun mwb-check-legal-for-delete (src-file)
@@ -1092,8 +1092,9 @@ postid: if found."
     (case (mwb-check-legal-for-publish fn)
       ((PUBLISHED)
        (message "This post has been published, you can update it, using M-x mwb-edit-post(C-c c e)"))
-      ((FORBID) "One of `mwb-customize-checks` prevent this post!")
+      ((FORBID) (message "One of `mwb-customize-checks` prevent this post!"))
       (t
+       (message "Trying to post new article ... ")
        (mwb-request-password)
        (setq postid (mwb-metaweblog-new-post (mwb-current-buffer-to-post) t)
              postid (if (integerp postid) (int-to-string postid) postid)
